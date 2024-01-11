@@ -1,0 +1,59 @@
+---
+title: "Analysis of Quinoa Seed Traits"
+subtitle: "Dataset: Lysine.14.mgG"
+author: "1066809"
+bibliography: bibliography.bib
+format: 
+  html:
+    fig-width: 8
+    fig-height: 4
+    code-fold: false # true
+    toc: true
+    toc-depth: 1
+    toc-location: left
+    embed-resources: true # single html file
+    anchor-sections: true
+    smooth-scroll: true
+    
+  pdf:
+    header-includes:
+      - \usepackage[T1]{fontenc}
+      - \usepackage[utf8]{inputenc}
+reference-location: margin      
+editor: visual
+---
+
+# Data Description
+The dataset contains measurements from 360 quinoa accessions, detailing various seed traits. The data includes continuous measurements such as lysine content (measured in mg/g), yield (measured in g/plant) and Thousand Seed Weight, or TSW (measured in grams).
+
+# Analysis Description
+This report presents an analysis of seed traits from a quinoa dataset consisting of 360 accessions. The analysis focuses specifically on the `Lysine.14.mgG` trait and its relationship with `yield` and thousand seed weight (`TSW`), although there are more phenotypic traits included in the dataset such as plant height in different development stages, inflorescence, content of different proteins, among others.
+
+## Steps and parameter choices
+
+**Project creation and dataset import:** 
+
+```{r histogram_plot}
+#| label: fig-lysine-distribution
+#| fig-cap: "Histogram of the distribution of Lysine content"
+#| warning: false
+
+#load data and libraries
+library(tidyverse)
+data <- read_csv("https://drive.google.com/file/d/1FQFeAfjKDntOvWy_4T4CAiiKcThQR06A/view?usp=sharing")
+
+#Description of the code
+ggplot(data, aes(x = Lysine.14.mgG)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Lysine.14.mgG", x = "Lysine.14.mgG", y = "Frequency")
+```
+
+See @fig-lysine-distribution for an illustration.
+
+
+
+
+# References
+::: {#refs}
+:::
