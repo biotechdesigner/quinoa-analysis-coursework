@@ -5,6 +5,9 @@ author: "1066809"
 bibliography: bibliography.bib
 format: 
   html:
+    theme:
+      light: flatly
+      dark: darkly
     fig-width: 8
     fig-height: 4
     code-fold: false # true
@@ -21,17 +24,119 @@ format:
       - \usepackage[utf8]{inputenc}
 reference-location: margin      
 editor: visual
+tbl-cap-location: margin
 ---
 
 # Data Description
+
 The dataset contains measurements from 360 quinoa accessions, detailing various seed traits. The data includes continuous measurements such as lysine content (measured in mg/g), yield (measured in g/plant) and Thousand Seed Weight, or TSW (measured in grams).
 
 # Analysis Description
+
 This report presents an analysis of seed traits from a quinoa dataset consisting of 360 accessions. The analysis focuses specifically on the `Lysine.14.mgG` trait and its relationship with `yield` and thousand seed weight (`TSW`), although there are more phenotypic traits included in the dataset such as plant height in different development stages, inflorescence, content of different proteins, among others.
 
-## Steps and parameter choices
+## Project creation and dataset import
+The data was imported using the `readr` package, which is part of the tidyverse suite in R. This package was used primarily because is commonly used to import data such as Comma Separated Values (CSV), which in this case was the format of the dataset given. This package also supports the upload of a file located in a repository, so a repository was made using GitHub to avoid errors compiling the quarto file given the project has multiple external files (dataset and references). [Access and download the repository](https://github.com/biotechdesigner/quinoa-analysis-coursework)
 
-**Project creation and dataset import:** 
+Después, la selección de contenido del set de datos se realizó para nomas obtener los datos de interés y cinco columnas más que referencían cada entrada de datos como FileName, repetition, ID of repetitions, entry y genotipo. Por último, se acomodó el set de datos por genotipo para poder visualizar mejor las repeticiones realizadas, las entradas de datos y los valores perdidos. Abajo se muestra un ejemplo del acomodo de los datos despúes de realizar estos cambios mencionados:
+
+```{r data_visualization_and_tidy}
+#| label: tbl-tidy-data
+#| tbl-cap: "Partial data visualization after eliminating unwanted columns and sorted by genotype"
+#| tbl-cap-location: bottom
+#| warning: false
+
+#load data and libraries
+library(tidyverse)
+data <- read_csv("https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/SM_Data.csv")
+
+#Select only the columns of interest
+data1 <- data %>% select(FileName, rep, RPid, entry, genotype, Lysine.14.mgG, TSW, Yield_g)
+
+#Sort by genotype to see the different entries and repetitions
+sortby_genotype <- data1 %>% arrange(genotype)
+
+#See the results in a dynamic table
+library(knitr)
+kable(head(sortby_genotype), align = "lllllllr")
+
+```
+
+## Missing Data Assessment
+Given the format of the missing values in the dataset (every missing data cell was filled with NA), the proportion of missing values was visualized using the `visdat` and `naniar` package. The first thing to do was visualize the missing data of all the factors in the dataset:
+
+```{r missing_data_all}
+#| label: fig-missing-data-all
+#| fig-cap: "Missing data from the whole dataset"
+#| warning: false
+
+#load data and libraries
+library(tidyverse)
+data <- read_csv("https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/SM_Data.csv")
+
+library(visdat)
+vis_miss(data,
+sort_miss = TRUE)
+
+```
+
+```{r missing_data_all_by genotype}
+#| label: fig-missing-data-all-bygenotype
+#| fig-cap: "Missing data from the whole dataset sorted by genotype"
+#| warning: false
+
+#load data and libraries
+library(tidyverse)
+data <- read_csv("https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/SM_Data.csv")
+
+#Sort by genotype to see the different entries and repetitions
+sortby_genotype <- data %>% arrange(genotype)
+
+library(visdat)
+vis_miss(sortby_genotype,
+sort_miss = TRUE)
+
+```
+
+It is visible that the data from the different protein content are the ones that are having the mayority of missing data in the whole dataset. This could be because **[Explore the causes of missing data due to hard experimentation or something like that].** It is also noticeable that the data that is missing someohow looks "clustered". This could indicate the data missing is not MCAR (Missing Completley at Random) and further data elimination strategies should be used to do the statistical analysis correctly. 
+
+Following the analysis, the same visualization of the missing data was used, but only applied in the factors of interest:
+
+```{r missing_data_mydata}
+#| label: fig-missing-data-interest
+#| fig-cap: "Graphic visualization of missing data from Yield, TSW and Lysine content"
+#| warning: false
+
+#load data and libraries
+library(tidyverse)
+data <- read_csv("https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/SM_Data.csv")
+
+library(visdat)
+vis_miss(data[c("Yield_g", "TSW", "Lysine.14.mgG")],
+sort_miss = TRUE)
+
+```
+
+```{r missing_data_mydata}
+#| label: fig-missing-data-percentage
+#| fig-cap: "Percentage of missing data from Yield, TSW and Lysine content"
+#| warning: false
+
+#load data and libraries
+library(tidyverse)
+data <- read_csv("https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/SM_Data.csv")
+
+#Select only the columns of interest
+data1 <- data %>% select(Lysine.14.mgG, TSW, Yield_g)
+
+#Show missing data percentage of variables of interest
+library(naniar)
+gg_miss_var(data1, show_pct = TRUE)
+
+```
+
+## Distribution Analysis
+A histogram was generated for the Lysine.14.mgG trait using ggplot2 to visually assess its distribution. We set the binwidth to 1, as this provided a suitable level of granularity to observe the data's distribution without overcomplicating the visual representation.
 
 ```{r histogram_plot}
 #| label: fig-lysine-distribution
@@ -40,16 +145,23 @@ This report presents an analysis of seed traits from a quinoa dataset consisting
 
 #load data and libraries
 library(tidyverse)
-data <- read_csv("https://drive.google.com/file/d/1FQFeAfjKDntOvWy_4T4CAiiKcThQR06A/view?usp=sharing")
+data <- read_csv("https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/SM_Data.csv")
 
-#Description of the code
+#Histogram plot code
 ggplot(data, aes(x = Lysine.14.mgG)) +
   geom_histogram(binwidth = 1, fill = "blue", color = "black") +
   theme_minimal() +
   labs(title = "Distribution of Lysine.14.mgG", x = "Lysine.14.mgG", y = "Frequency")
 ```
 
-See @fig-lysine-distribution for an illustration.
+
+From @fig-lysine-distribution, it is visually inferred that the data seems to be approximately normally distributed with a single peak and symmetric shape. However, there is a warning message that 348 rows containing non-finite values were removed from the histogram. This indicates that there were entries that could not be plotted, likely because they are the missing values you've previously identified.
+
+## Normality Test
+The Shapiro-Wilk test was employed to statistically examine the normality of the Lysine.14.mgG trait. This test is a common choice for normality testing due to its power and performance, particularly in moderate sample sizes like ours.
+
+## Correlation analysis Regression Analysis
+We computed the Pearson correlation coefficient to quantify the linear relationship between the lysine content and yield traits (Yield_g and TSW). Following that, linear regression models were constructed to predict yield and TSW from lysine content. The choice of linear regression was predicated on its interpretability and its foundational role in understanding relationships between continuous variables.
 
 
 
