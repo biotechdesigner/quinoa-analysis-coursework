@@ -3,6 +3,7 @@ title: "Analysis of Quinoa Seed Traits"
 subtitle: "Dataset: Lysine.14.mgG"
 author: "1066809"
 bibliography: bibliography.bib
+number-sections: true
 format: 
   html:
     theme:
@@ -24,21 +25,44 @@ format:
       - \usepackage[utf8]{inputenc}
 reference-location: margin      
 editor: visual
+execute:
+  warning: false
 tbl-cap-location: margin
 ---
 
+```{r data_libraries_import}
+#| echo: false
+
+#Standard library
+library(tidyverse)
+
+#Data visualitzation
+library(visdat)
+
+#Table creation
+library(knitr)
+
+#Mutiple imputation
+library(mice)
+
+#MCAR test
+library(naniar)
+
+#Raw data analysis
+data <- read.csv("https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/SM_Data.csv")
+```
+
+
 # Data Description
 
-The dataset contains measurements from 360 quinoa accessions, detailing various seed traits. The data includes continuous measurements such as lysine content (measured in mg/g), yield (measured in g/plant) and Thousand Seed Weight, or TSW (measured in grams).
+The dataset contains measurements from 360 quinoa accessions, detailing various seed traits retreived from @craine-2023. The data includes continuous measurements such as lysine content (measured in mg/g), yield (measured in g/plant) and Thousand Seed Weight, or TSW (measured in grams).
 
 # Analysis Description
 
-This report presents an analysis of seed traits from a quinoa dataset consisting of 360 accessions. The analysis focuses specifically on the `Lysine.14.mgG` trait and its relationship with `yield` and thousand seed weight (`TSW`), although there are more phenotypic traits included in the dataset such as plant height in different development stages, inflorescence, content of different proteins, among others.
+This report presents an analysis of seed traits from a quinoa dataset consisting of 360 accessions. The analysis focuses specifically on the `Lysine.14.mgG` trait and its relationship with `yield` and thousand seed weight (`TSW`), although there are more phenotypic traits included in the dataset. An analysis of the dataset was made to tidy the data. Then, the missing values of the dataset were reported and the missing values were eliminated. Furthermore a distribution plot of the `Lysine.14.mgG` trait was made with a normality test to see if the data is normally distributed. Finally, a correlation and regression analysis was made between the `Lysine.14.mgG` trait and the `yield` and (`TSW`) to determine wether Lysine content in quinoa seeds is an influential factor in the yield and TSW.
 
-## Project creation and dataset import
-The data was imported using the `readr` package, which is part of the tidyverse suite in R. This package was used primarily because is commonly used to import data such as Comma Separated Values (CSV), which in this case was the format of the dataset given. This package also supports the upload of a file located in a repository, so a repository was made using GitHub to avoid errors compiling the quarto file given the project has multiple external files (dataset and references). [Access and download the repository](https://github.com/biotechdesigner/quinoa-analysis-coursework)
-
-Después, la selección de contenido del set de datos se realizó para nomas obtener los datos de interés y cinco columnas más que referencían cada entrada de datos como FileName, repetition, ID of repetitions, entry y genotipo. Por último, se acomodó el set de datos por genotipo para poder visualizar mejor las repeticiones realizadas, las entradas de datos y los valores perdidos. Abajo se muestra un ejemplo del acomodo de los datos despúes de realizar estos cambios mencionados:
+## Dataset import and content selection
+The dataset content selection was carried out to only obtain the data of interest and five more columns that reference each data entry such as FileName, repetition, ID of repetitions, entry, and genotype. Finally, the dataset was arranged by genotype to better visualize the repetitions made, the data entries, and the missing values. Below is an example of the data arrangement after making these mentioned changes:"
 
 ```{r data_visualization_and_tidy}
 #| label: tbl-tidy-data
@@ -48,7 +72,7 @@ Después, la selección de contenido del set de datos se realizó para nomas obt
 
 #load data and libraries
 library(tidyverse)
-data <- read_csv("https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/SM_Data.csv")
+data <- read.csv("SM_Data.csv")
 
 #Select only the columns of interest
 data1 <- data %>% select(FileName, rep, RPid, entry, genotype, Lysine.14.mgG, TSW, Yield_g)
@@ -63,108 +87,252 @@ kable(head(sortby_genotype), align = "lllllllr")
 ```
 
 ## Missing Data Assessment
-Given the format of the missing values in the dataset (every missing data cell was filled with NA), the proportion of missing values was visualized using the `visdat` and `naniar` package. The first thing to do was visualize the missing data of all the factors in the dataset:
-
-```{r missing_data_all}
-#| label: fig-missing-data-all
-#| fig-cap: "Missing data from the whole dataset"
-#| warning: false
-
-#load data and libraries
-library(tidyverse)
-data <- read_csv("https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/SM_Data.csv")
-
-library(visdat)
-vis_miss(data,
-sort_miss = TRUE)
-
-```
-
-```{r missing_data_all_by genotype}
-#| label: fig-missing-data-all-bygenotype
-#| fig-cap: "Missing data from the whole dataset sorted by genotype"
-#| warning: false
-
-#load data and libraries
-library(tidyverse)
-data <- read_csv("https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/SM_Data.csv")
-
-#Sort by genotype to see the different entries and repetitions
-sortby_genotype <- data %>% arrange(genotype)
-
-library(visdat)
-vis_miss(sortby_genotype,
-sort_miss = TRUE)
-
-```
-
-It is visible that the data from the different protein content are the ones that are having the mayority of missing data in the whole dataset. This could be because **[Explore the causes of missing data due to hard experimentation or something like that].** It is also noticeable that the data that is missing someohow looks "clustered". This could indicate the data missing is not MCAR (Missing Completley at Random) and further data elimination strategies should be used to do the statistical analysis correctly. 
-
-Following the analysis, the same visualization of the missing data was used, but only applied in the factors of interest:
+Given the format of the missing values in the dataset (every missing data cell was filled with NA), the proportion of missing values of the trats of interest were was visualized:
 
 ```{r missing_data_mydata}
 #| label: fig-missing-data-interest
-#| fig-cap: "Graphic visualization of missing data from Yield, TSW and Lysine content"
+#| fig-cap: "Graphic visualization and percantage of missing data from Yield, TSW and Lysine content"
 #| warning: false
 
-#load data and libraries
 library(tidyverse)
-data <- read_csv("https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/SM_Data.csv")
-
+data <- read.csv("SM_Data.csv")
 library(visdat)
 vis_miss(data[c("Yield_g", "TSW", "Lysine.14.mgG")],
 sort_miss = TRUE)
 
 ```
 
-```{r missing_data_mydata}
-#| label: fig-missing-data-percentage
-#| fig-cap: "Percentage of missing data from Yield, TSW and Lysine content"
+El análisis de datos perdidos de la tabla @fig-missing-data-interest indica que existe un 12% de datos perdidos del contenido de lisina, un 3% de TSW y ningún dato perdido de rendimiento. De acuerdo con @lee-2021, al subir el porcentaje de datos perdidos y el tipo de datos perdidos, se tendrán que tomar diferentes estrategias de eliminación de datos faltantes como por ejemplo imputación múltiple para poder hacer la distribución, regresión y correlación correctamente. Por esta razón se realizó un análisis MCAR para determinar si es posible simplemente eliminar las columnas de datos perdidos:
+
+```{r mcar_test}
+#| label: tbl-mcartest
+#| tbl-cap: "MCAR test for Yield, TSW and Lysine content"
 #| warning: false
 
 #load data and libraries
 library(tidyverse)
-data <- read_csv("https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/SM_Data.csv")
+data <- read.csv("SM_Data.csv")
 
 #Select only the columns of interest
 data1 <- data %>% select(Lysine.14.mgG, TSW, Yield_g)
 
-#Show missing data percentage of variables of interest
+#mcar test
 library(naniar)
-gg_miss_var(data1, show_pct = TRUE)
+result <- mcar_test(data1)
+library(knitr)
+kable(result, align = "llcr")
 
 ```
 
-## Distribution Analysis
+El resultado del análisis MCAR definió que el valor p es igual a 0, lo cual rechaza la hipótesis nula y define que los datos no son MCAR, por lo tanto, según @bennett-2001 se recomienda usar imputación múltiple (MI) para manejar los datos correctamente, y se usará este método en el análisis de distribución (@sec-dis),correlación (@sec-corr) y regresión (@sec-reg). Abajo se demuestra el código para generar el set de datos con valores imputados en formato csv:
+
+``` {r multiple_imputation}
+#| warning: false
+#| results: false
+
+#load imputed data and libraries
+library(tidyverse)
+data <- read.csv("SM_Data.csv")
+library(mice)
+imputed_data <- mice(data[c("Yield_g", "TSW", "Lysine.14.mgG")], m=5, method='pmm')
+completed_data <- complete(imputed_data, 1)
+
+#create csv with the new imputed data
+write.csv(completed_data, "imputed_data.csv")
+imputed_data <- read.csv("imputed_data.csv")
+```
+
+## Frequency Distribution Analysis {#sec-dis}
 A histogram was generated for the Lysine.14.mgG trait using ggplot2 to visually assess its distribution. We set the binwidth to 1, as this provided a suitable level of granularity to observe the data's distribution without overcomplicating the visual representation.
 
 ```{r histogram_plot}
 #| label: fig-lysine-distribution
-#| fig-cap: "Histogram of the distribution of Lysine content"
+#| fig-cap: "Histogram plot of the frequency distribution of Lysine content"
 #| warning: false
 
 #load data and libraries
 library(tidyverse)
-data <- read_csv("https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/SM_Data.csv")
+imputed_data <- read.csv("imputed_data.csv")
 
 #Histogram plot code
-ggplot(data, aes(x = Lysine.14.mgG)) +
-  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+ggplot(imputed_data, aes(x = Lysine.14.mgG)) +
+  geom_histogram(binwidth = 1, fill = "lightblue", color = "black") +
   theme_minimal() +
-  labs(title = "Distribution of Lysine.14.mgG", x = "Lysine.14.mgG", y = "Frequency")
+  labs(title = "Frequency distribution of Lysine Content", x = "Lysine.14.mgG", y = "Frequency") 
 ```
 
 
-From @fig-lysine-distribution, it is visually inferred that the data seems to be approximately normally distributed with a single peak and symmetric shape. However, there is a warning message that 348 rows containing non-finite values were removed from the histogram. This indicates that there were entries that could not be plotted, likely because they are the missing values you've previously identified.
+From @fig-lysine-distribution, it is visually inferred that the data seems to be approximately normally distributed with a single peak and symmetric shape, however, it doesn´t follow exactly the bell curve, so it is needed to do a nromality test to make sure how the data is distributed. 
 
 ## Normality Test
-The Shapiro-Wilk test was employed to statistically examine the normality of the Lysine.14.mgG trait. This test is a common choice for normality testing due to its power and performance, particularly in moderate sample sizes like ours.
+The Shapiro-Wilk test was employed to statistically examine the normality of the Lysine.14.mgG trait. This test is a common choice for normality testing due to its power and performance, particularly in moderate sample sizes like this one.
 
-## Correlation analysis Regression Analysis
+``` {r normal_distribution}
+#| label: tbl-normal-distribution
+#| tbl-cap: "Shapiro_Wilk test results for lysine content"
+#| warning: false
+
+#load imputed data and libraries
+library(tidyverse)
+imputed_data <- read.csv("imputed_data.csv")
+
+#Test for normal distribution
+normality <- shapiro.test(imputed_data$Lysine.14.mgG)
+result <- data.frame(
+    W = normality$statistic,
+    Pvalue = normality$p.value
+)
+knitr::kable(result, align = "llr")
+```
+
+The Shapiro-Wilk normality test has a p-value of almost 0 which is far below any conventional alpha level (e.g., 0.05). despite the high W value, the test finds significant evidence to suggest that the lysine content does not follow a normal distribution, así que por esa razón se necesitará esto para tomar en cuenta los análisis de correlación y regresión.
+
+## Correlation analysis {#sec-corr}
 We computed the Pearson correlation coefficient to quantify the linear relationship between the lysine content and yield traits (Yield_g and TSW). Following that, linear regression models were constructed to predict yield and TSW from lysine content. The choice of linear regression was predicated on its interpretability and its foundational role in understanding relationships between continuous variables.
 
+``` {r correlation_analysis_yield}
+#| label: fig-correlation_yield
+#| fig-cap: "Correlation analysis between Lysine content and Yield traits"
+#| warning: false
 
+#load imputed data and libraries
+library(tidyverse)
+imputed_data <- read.csv("imputed_data.csv")
 
+#Add logaritmic values to Lysine content to compensate for non-normal distribution
+imputed_data$Lysine.14.mgG_transformed <- log(imputed_data$Lysine.14.mgG)
+
+#Correlation analysis
+correlation_value <- cor(imputed_data$Lysine.14.mgG, imputed_data$Yield_g, method = "spearman")
+
+# Correlation plot
+ggplot(imputed_data, aes(x = Lysine.14.mgG_transformed, y = Yield_g)) +
+  geom_point(shape = 21, fill = '#0f993d', color = 'white', size = 3) +
+  annotate("text", x = Inf, y = Inf, label = paste("Spearman Correlation: ", round(correlation_value, 5)), 
+           hjust = 1.1, vjust = 1.1) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Lysine content  (mg/g)", y = "Yield (g/plant)") 
+```
+
+``` {r correlation_analysis_tsw}
+#| label: fig-correlation_tsw
+#| fig-cap: "Correlation analysis between Lysine content and Thousand Seed Weight (TSW)"
+#| warning: false
+
+#load imputed data and libraries
+library(tidyverse)
+imputed_data <- read.csv("imputed_data.csv")
+
+#Add logaritmic values to Lysine content to compensate for non-normal distribution
+imputed_data$Lysine.14.mgG_transformed <- log(imputed_data$Lysine.14.mgG)
+
+#Correlation analysis
+correlation_value <- cor(imputed_data$Lysine.14.mgG, imputed_data$TSW, method = "spearman")
+
+# Correlation plot
+ggplot(
+  imputed_data, aes(x = Lysine.14.mgG_transformed, y = TSW)) +
+  geom_point(shape = 21, fill = '#0f993d', color = 'white', size = 3) +
+  annotate("text", x = Inf, y = Inf, label = paste("Spearman Correlation: ", round(correlation_value, 5)), hjust = 1.1, vjust = 1.1) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Lysine content (mg/g)", y = "TSW (g)"
+)
+```
+
+Como se puede ver, el nivel de correlación de las variables de yield con el contenido de lisina es positivamente moderado, por lo que se puede inferir que cuando el contenido de lisina en las semillas de quinoa es mayor, el yield y el TSW también será mayor.
+
+## Regression analysis {#sec-reg}
+
+``` {r regression_analysis_yield}
+#| label: tbl-regression_yield
+#| tbl-cap: "Regression analysis between Lysine content and Yield"
+#| warning: false
+
+#load imputed data and libraries
+library(tidyverse)
+imputed_data <- read.csv("imputed_data.csv")
+imputed_data$Lysine.14.mgG_transformed <- log(imputed_data$Lysine.14.mgG)
+
+#Regression analysis 
+reg1 <- lm(Yield_g ~ Lysine.14.mgG_transformed, data = imputed_data)
+reg_yield <- summary(reg1)
+reg_summary <- broom::glance(reg_yield)
+knitr::kable(reg_summary, align = "llllllrr")
+```
+
+``` {r coef_analysis_yield}
+#| label: tbl-coef_yield
+#| tbl-cap: "Regression equation of Lysine content and Yield based in regression coefficients"
+#| warning: false
+
+#load imputed data and libraries
+library(tidyverse)
+imputed_data <- read.csv("imputed_data.csv")
+imputed_data$Lysine.14.mgG_transformed <- log(imputed_data$Lysine.14.mgG)
+
+#Regression and coefficient analysis
+reg1 <- lm(Yield_g ~ Lysine.14.mgG_transformed, data = imputed_data)
+reg_yield <- summary(reg1)
+ecuation_yield <- coef(reg_yield)
+paste("Yield =", ecuation_yield[1], "+", ecuation_yield[2], "* Lysine.14.mgG")
+
+```
+
+La ecuación del modelo lineal es:
+
+$ Y = \beta_0 + \beta_1 X $
+
+donde \( \beta_0 \) es -66.5033 y \( \beta_1 \) es 17.9500. Por lo tanto, la ecuación es:
+
+$ Y = -66.5033 + 17.9500 \times X $
+
+``` {r regression_analysis_tsw}
+#| label: regression_tsw
+#| cap: "Regression analysis between Lysine content and Thousand Seed Weight (TSW)"
+#| warning: false
+
+#load imputed data and libraries
+library(tidyverse)
+imputed_data <- read.csv("imputed_data.csv")
+imputed_data$Lysine.14.mgG_transformed <- log(imputed_data$Lysine.14.mgG)
+
+#Regression analysis 
+reg <- lm(TSW ~ Lysine.14.mgG_transformed, data = imputed_data)
+reg_tsw <- summary(reg)
+reg_summary <- broom::glance(reg_tsw)
+knitr::kable(reg_summary, align = "llllllrr")
+```
+
+``` {r coef_analysis_tsw}
+#| label: tbl-coef_tsw
+#| tbl-cap: "Regression equation of Lysine content and Thousand Seed Weight (TSW) based in regression coefficients"
+#| warning: false
+
+#load imputed data and libraries
+library(tidyverse)
+imputed_data <- read.csv("imputed_data.csv")
+imputed_data$Lysine.14.mgG_transformed <- log(imputed_data$Lysine.14.mgG)
+
+#Regression and coefficient analysis
+reg <- lm(TSW ~ Lysine.14.mgG_transformed, data = imputed_data)
+reg_tsw <- summary(reg)
+ecuation_tsw <- coef(reg_tsw)
+paste("Yield =", ecuation_tsw[1], "+", ecuation_tsw[2], "* Lysine.14.mgG")
+```
+
+# Discussion
+
+## Quarto
+
+```{r}
+data_test <- read.csv("/Users/vrivero/Documents/GitHub/quinoa-analysis-coursework/SM_Data.csv")
+```
+
+You can add options to executable code like this
+
+```{r}
+head(data_test)
+```
 
 # References
 ::: {#refs}
