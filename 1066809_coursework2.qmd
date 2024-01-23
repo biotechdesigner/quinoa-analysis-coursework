@@ -35,7 +35,7 @@ tbl-cap-location: bottom
 
 # Dataset and libraries used for the analysis
 Below is a list of libraries used in conjunction with the R programming language, Quarto, and Jupyter for the creation of this statistical analysis.
-All datasets and libraries needed were imported at the start of the quarto project. Data was imported into a GitHub Repository to access it directly. [Access the repository](https://github.com/biotechdesigner/quinoa-analysis-coursework/tree/main). The raw data `data` was selected to include only the traits desired. This data is referred to as `selected_data` in the project code. The dataset `data` was modified to treat missing data as described in @sec-miss. This data is referred in this project as `imputed_data`
+All datasets and libraries needed were imported at the start of the quarto project. Data was imported into a GitHub Repository to access it directly. [Access the repository](https://github.com/biotechdesigner/biotechdesigner.github.io/tree/main). The raw data `data` was selected to include only the traits desired. This data is referred to as `selected_data` in the project code. The dataset `data` was modified to treat missing data as described in @sec-miss. This data is referred in this project as `imputed_data`
 ```{r data_libraries_import}
 #| output: false
 
@@ -56,7 +56,7 @@ library(naniar)
 
 #Raw data analysis
 data <- read.csv(
-"https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/SM_Data.csv"
+"https://raw.githubusercontent.com/biotechdesigner/biotechdesigner.github.io/main/SM_Data.csv"
 )
 
 #Selected data for Lysine content, Yield and TSW
@@ -65,7 +65,7 @@ selected_data <- arrange(data1, -Yield_g)
 
 #Raw imputed data
 imputed_data <- read.csv(
-"https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/imputed_data.csv"
+"https://raw.githubusercontent.com/biotechdesigner/biotechdesigner.github.io/main/imputed_data.csv"
 )
 
 ```
