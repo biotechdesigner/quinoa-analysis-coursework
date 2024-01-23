@@ -1,0 +1,265 @@
+---
+title: "Analysis of Quinoa Seed Traits"
+subtitle: "Dataset: Lysine.14.mgG"
+author: "1066809"
+bibliography: "https://api.citedrive.com/bib/0ffe6857-a531-47fa-a32f-6ed0fd2467a1/references.bib?x=eyJpZCI6ICIwZmZlNjg1Ny1hNTMxLTQ3ZmEtYTMyZi02ZWQwZmQyNDY3YTEiLCAidXNlciI6ICI4Mjk3IiwgInNpZ25hdHVyZSI6ICJlM2ZkY2U1NzgyMWRlOTJiMWU0MzI4MjQ5N2NhZWZiNzZlOGIwZmFjNGRhZGI4NjRlYTNjOGY3MDA2NTYzYTAxIn0=/bibliography.bib"
+number-sections: true
+format: 
+  html:
+    code-overflow: wrap
+    theme: darkly
+    fig-width: 8
+    fig-height: 4
+    code-fold: false # true
+    toc: true
+    overflow: wrap
+    toc-depth: 1
+    toc-location: left
+    embed-resources: true # single html file
+    anchor-sections: true
+    smooth-scroll: true
+  pdf:
+    code-overflow: wrap
+    tbl-cap-location: top
+    header-includes:
+      - \usepackage[T1]{fontenc}
+      - \usepackage[utf8]{inputenc}
+    toc: true
+    number-sections: true
+    colorlinks: true
+editor: visual
+execute:
+  warning: false
+tbl-cap-location: bottom
+---
+
+# Dataset and libraries used for the analysis
+Below is a list of libraries used in conjunction with the R programming language, Quarto, and Jupyter for the creation of this statistical analysis.
+All datasets and libraries needed were imported at the start of the quarto project. Data was imported into a GitHub Repository to access it directly. [Access the repository](https://github.com/biotechdesigner/quinoa-analysis-coursework/tree/main). The raw data `data` was selected to include only the traits desired. This data is referred to as `selected_data` in the project code. The dataset `data` was modified to treat missing data as described in @sec-miss. This data is referred in this project as `imputed_data`
+```{r data_libraries_import}
+#| output: false
+
+#Standard library
+library(tidyverse)
+
+#Data visualitzation
+library(visdat)
+
+#Table creation
+library(knitr)
+
+#Mutiple imputation
+library(mice)
+
+#MCAR test
+library(naniar)
+
+#Raw data analysis
+data <- read.csv(
+"https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/SM_Data.csv"
+)
+
+#Selected data for Lysine content, Yield and TSW
+data1 <- data %>% select(Lysine.14.mgG, TSW, Yield_g)
+selected_data <- arrange(data1, -Yield_g)
+
+#Raw imputed data
+imputed_data <- read.csv(
+"https://raw.githubusercontent.com/biotechdesigner/quinoa-analysis-coursework/main/imputed_data.csv"
+)
+
+```
+
+# Data Description
+
+The dataset contains measurements from 360 quinoa accessions, detailing various seed traits retreived from @craine-2023. The data includes continuous measurements such as lysine content (measured in mg/g), yield (measured in g/plant) and Thousand Seed Weight, or TSW (measured in grams).
+
+# Analysis Description
+
+This report presents an analysis of seed traits from a quinoa dataset consisting of 360 accessions. The analysis focuses specifically on the `Lysine.14.mgG` trait and its relationship with `yield` and thousand seed weight (`TSW`), although there are more phenotypic traits included in the dataset. An analysis of the dataset was made to tidy the data. Then, the missing values of the dataset were reported and the missing values were implanted using Multiple imputation (MI) using the Predictive Mean Matching method (PMM) because the MCAR (Missing Not At Random) test was made and resulted negative to the lysine content,the percentage of missing data on lysine content was above 10% and also to keep the statistical power of the analysis, so it reduces the chance of false-positive or false-negative conclusions. The article of @craine-2023 eliminates the missing values completely of the analysis, but it should be useful to compare the correlation and distribution analysis with and without MI. PPM was used because imputations are based on values observed elsewhere, so they are realistic and is a recomended method when the data is Missing At Random (MAR) [@li-2015]. Furthermore, a distribution plot of the `Lysine.14.mgG` trait was made with a normality test to see if the data is normally distributed using the Shapiro-Wilk test, which is common choice for normality testing due to its power and performance, particularly in moderate sample sizes like this one. Finally, a correlation and regression analysis was made between the `Lysine.14.mgG` trait and the `yield` and (`TSW`) separately using spearman correlation to account for the non-normal distribution of the data [@sarmento]. Additionaly, logaritmic values of the lysine content were used to try to normalize the data to some extent. These analysis were made to determine wether Lysine content in quinoa seeds is an influential factor to determine the yield and TSW.
+
+## Missing Data Assessment {#sec-miss}
+
+Given the format of the missing values in the dataset (every missing data cell was filled with NA), the proportion of missing values of the traits of interest was visualized:
+
+```{r missing_data_mydata}
+#| label: fig-missing-data-interest
+#| fig-cap: "Graphic visualization and percantage of missing data from Yield, TSW and Lysine content"
+#| warning: false
+
+vis_miss(selected_data, sort_miss = TRUE)
+
+```
+
+The analysis of missing data from table @fig-missing-data-interest reveals 12% missing lysine content, 3% in TSW, and no yield data loss. @lee-2021 suggests using strategies like multiple imputation for increased and varied missing data for precise analyses. An MCAR analysis was performed to assess the feasibility of deleting columns with missing data.
+
+```{r mcar_test}
+#| label: tbl-mcartest
+#| tbl-cap: "MCAR test for Yield, TSW and Lysine content"
+#| warning: false
+
+#mcar test
+result <- mcar_test(selected_data)
+kable(result, align = "llcr")
+```
+
+The MCAR analysis results determined that the p-value is 0, rejecting the null hypothesis and indicating the data are not MCAR. Therefore, as per @bennett-2001, multiple imputation (MI) is recommended for proper data handling. This method will be used in the distribution (@sec-dis), correlation (@sec-corr), and regression (@sec-reg) analyses. Below is the code for generating the dataset with imputed values in CSV format [(See on GitHub)](https://github.com/biotechdesigner/quinoa-analysis-coursework/blob/main/imputed_data.csv). The project now refers to a new table with imputed data as `imputed_data`.
+
+```{r multiple_imputation}
+#| warning: false
+#| results: false
+
+#Using MICE library to do the MI using PPM
+imputed_data <- mice(data[c("Yield_g", "TSW", "Lysine.14.mgG")], m=5, method='pmm')
+completed_data <- complete(imputed_data, 1)
+
+#create csv with the new imputed data:
+write.csv(completed_data, "imputed_data.csv")
+imputed_data <- read.csv("imputed_data.csv")
+```
+
+## Frequency Distribution Analysis {#sec-dis}
+
+```{r histogram_plot}
+#| label: fig-lysine-distribution
+#| fig-cap: "Histogram plot of the frequency distribution of Lysine content"
+#| warning: false
+#| fig.width: 8
+
+#Histogram plot code
+ggplot(imputed_data, aes(x = Lysine.14.mgG)) +
+  geom_histogram(binwidth = 1, fill = "lightblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Frequency distribution of Lysine Content", x = 
+"Lysine content (mg/g)", y = "Frequency") 
+```
+
+From @fig-lysine-distribution, it is visually inferred that the data seems to be approximately normally distributed with a single peak and symmetric shape, however, it doesn´t follow exactly the bell curve, so it is needed to do a nromality test to make sure how the data is distributed.
+
+## Normality Test
+
+```{r normal_distribution}
+#| label: tbl-normal-distribution
+#| tbl-cap: "Shapiro_Wilk test results for lysine content"
+#| warning: false
+
+#Test for normal distribution
+normality <- shapiro.test(imputed_data$Lysine.14.mgG)
+result <- data.frame(
+    W = normality$statistic,
+    Pvalue = normality$p.value
+)
+kable(result, align = "llr")
+```
+
+The Shapiro-Wilk normality test has a p-value of almost 0 which is far below any conventional alpha level (e.g., 0.05). despite the high W value, the test finds significant evidence to suggest that the lysine content does not follow a normal distribution. For that reason, this will be needed to take into account the correlation and regression analyses.
+
+## Correlation analysis {#sec-corr}
+
+```{r correlation_analysis_yield}
+#| label: fig-correlation_yield
+#| fig-cap: "Correlation analysis between Lysine content and Yield traits"
+#| warning: false
+#| fig.width: 8
+#| fig.height: 4
+
+#Add a column in imputed data with Lysine content transformed to logaritmic values
+imputed_data$Lysine.14.mgG_log <- log(imputed_data$Lysine.14.mgG)
+
+#Correlation analysis
+cor_value_yield <- cor(imputed_data$Lysine.14.mgG_log, imputed_data$Yield_g, 
+method = "spearman")
+
+# Correlation plot
+ggplot(imputed_data, aes(x = Lysine.14.mgG_log, y = Yield_g)) +
+  geom_point(shape = 21, fill = '#0f993d', color = 'white', size = 3) +
+  annotate("text", x = Inf, y = Inf, label = paste("Spearman Correlation: ", 
+    round(cor_value_yield, 5)),
+           hjust = 1.1, vjust = 1.1) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Lysine content  log(mg/g)", y = "Yield (g/plant)") 
+```
+
+### Correlation of Lysine content and TSW
+```{r correlation_analysis_tsw}
+#| label: fig-correlation_tsw
+#| fig-cap: "Correlation analysis between Lysine content and Thousand Seed Weight (TSW)"
+#| warning: false
+
+#Correlation analysis
+cor_value_tsw <- cor(imputed_data$Lysine.14.mgG_log, imputed_data$TSW, 
+method = "spearman")
+
+# Correlation plot
+ggplot(
+  imputed_data, aes(x = Lysine.14.mgG_log, y = TSW)) +
+  geom_point(shape = 21, fill = '#0f993d', color = 'white', size = 3) +
+  annotate("text", x = Inf, y = Inf, label = paste("Spearman Correlation: ", 
+  round(cor_value_tsw, 5)), hjust = 1.1, vjust = 1.1) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Lysine content log(mg/g)", y = "TSW (g)"
+)
+```
+
+As can be seen, the correlation level between yield variables and lysine content is moderately positive (0.30 with yield and 0.39 with TSW) similar as reported in @craine-2023, indicating that when the lysine content in quinoa seeds is higher, the yield and TSW will also be higher.
+
+## Regression analysis {#sec-reg}
+
+### Regression analysis and ecuation of Lysine content and Yield
+ This analysis is crucial for understanding the relationship between these two variables, indicating whether higher lysine content correlates with higher yield. In @tbl-regression_yield, it is observed that the p-value is less than 0.05, leading to the rejection of the null hypothesis and the conclusion that there is a significant relationship between lysine content and yield. Furthermore, the R^2 value indicates that approximately 10% of the variability in Yield_g is explained by the model. This suggests that there are other factors influencing the yield that are not accounted for in this analysis. Additionally, this analysis is based on a single value derived from many, so it was expected that lysine content would not explain the entire model. For this same reason, the reported regression equation will not be as precise for determining yield values.
+
+```{r regression_analysis_yield}
+#| label: tbl-regression_yield
+#| tbl-cap: "Regression analysis between Lysine content and Yield"
+#| warning: false
+
+#Regression analysis 
+reg1_yield <- lm(Yield_g ~ Lysine.14.mgG_log, data = imputed_data)
+sum_reg1_yield <- summary(reg1_yield)
+broom_yield_summary <- broom::glance(sum_reg1_yield)
+knitr::kable(broom_yield_summary, align = "llllllrr")
+```
+
+```{r coef_analysis_yield}
+#| label: coef_yield
+#| warning: false
+#| cap: "Regression ecuation between Lysine content and Yield"
+
+#Regression and coefficient analysis
+coefs_yield <- coef(reg1_yield)
+paste("Y =", coefs_yield[1], "+", coefs_yield[2], "* X")
+
+```
+
+### Regression analysis and ecuation of Lysine content and Thousand Seed Weight TSW
+The outcome of this analysis delineates the potential relationship between lysine content and Thousand Seed Weight (TSW). Similar to the previous regression analysis, the null hypothesis can be rejected, leading to the conclusion that there is a highly significant relationship between lysine content and TSW. However, the R^2 value is quite low (13%), indicating that there are other factors affecting TSW that are not considered in this analysis, which was to be expected.
+```{r regression_analysis_tsw}
+#| label: tbl-regression_tsw
+#| tbl-cap: "Regression analysis between Lysine content and Thousand Seed Weight (TSW)"
+#| warning: false
+
+#Regression analysis 
+reg1_tsw <- lm(TSW ~ Lysine.14.mgG_log, data = imputed_data)
+sum_reg1_tsw <- summary(reg1_tsw)
+broom_tsw_summary <- broom::glance(sum_reg1_tsw)
+knitr::kable(broom_tsw_summary, align = "llllllrr")
+```
+
+```{r coef_analysis_tsw}
+#| label: coef_tsw
+#| warning: false
+#| cap: "Regression ecuation between Lysine content and Thousand Seed Weight (TSW)"
+
+#Regression and coefficient analysis
+coefs_yield <- coef(reg1_tsw)
+paste("Y =", coefs_yield[1], "+", coefs_yield[2], "* X")
+```
+
+
+# Discussion
+The analysis of quinoa seed traits, particularly focusing on lysine content, yield, and thousand seed weight (TSW), provides some insights into quinoa's genetic diversity and agricultural potential. In the initial phase of the analysis, a significant proportion of data pertaining to lysine content was found to be missing in @fig-missing-data-interest, presenting a substantial challenge in the data evaluation process. This issue could arise from a multitude of factors, each with varying implications. Consequently, a decision was made to retain the data rows and employ multiple imputation techniques. This approach aimed to provide an alternative perspective to the analyses previously conducted by @craine-2023. Following the implementation of multiple imputation, the deviation of the dataset from a normal distribution suggested potential specific influences on the yield and Thousand Seed Weight (TSW) of the quinoa seeds as it can be seen in @tbl-normal-distribution. Subsequent regression and correlation analyses, focusing on the lysine content in relation to yield and TSW, confirmed the existence of a moderate positive correlation, as seen in @fig-correlation_yield and @fig-correlation_tsw. It was observed that lysine content in quinoa seeds positively impacts both yield and TSW. Nonetheless, it is important to recognize that this is not the only influential factor in the model construction, which was confirmed in @tbl-regression_yield and @tbl-regression_tsw with the R^2 value. In conclusion, a comprehensive analysis incorporating other characteristics within the dataset is essential to fully understand the myriad factors influencing the yield of quinoa seeds.
+
+# References
+
+::: {#refs}
+:::
