@@ -134,7 +134,7 @@ ggplot(imputed_data, aes(x = Lysine.14.mgG)) +
 "Lysine content (mg/g)", y = "Frequency") 
 ```
 
-From @fig-lysine-distribution, it is visually inferred that the data seems to be approximately normally distributed with a single peak and symmetric shape, however, it doesn´t follow exactly the bell curve, so it is needed to do a nromality test to make sure how the data is distributed.
+From @fig-lysine-distribution, it is visually inferred that the data seems to be approximately normally distributed with a single peak and symmetric shape, however, it doesn´t follow exactly the bell curve, so it is needed to do a normality test to make sure how the data is distributed.
 
 ## Normality Test
 
@@ -152,7 +152,7 @@ result <- data.frame(
 kable(result, align = "llr")
 ```
 
-The Shapiro-Wilk normality test has a p-value of almost 0 which is far below any conventional alpha level (e.g., 0.05). despite the high W value, the test finds significant evidence to suggest that the lysine content does not follow a normal distribution. For that reason, this will be needed to take into account the correlation and regression analyses.
+The Shapiro-Wilk normality test has a p-value of almost 0 which is far below any conventional alpha level (e.g., 0.05). despite the high W value, the test finds significant evidence to suggest that the lysine content does not follow a normal distribution. For that reason, this will be needed to take into account the correlation and regression analysis.
 
 ## Correlation analysis {#sec-corr}
 
